@@ -104,29 +104,27 @@ namespace VirusTotal_Uploader
                 var content = response.Content; // Get content of response
                 dynamic json = JsonConvert.DeserializeObject(content); // Deserialize JSON response
 
-                try
-                {
-                    // Shitty solution to check, but why not?
-                    // If it fails code will not continue
-                    // TODO: Actually elegant solution
-                    Console.WriteLine(json.permalink.ToString()); // Try to echo file permaling, if it does not exist, throw exception and upload file
+                bool previouslyUploaded = json.permalink != null;
+                bool reuploadFile = false;
 
-                    DialogResult dialogResult = MessageBox.Show(lang.GetString("This file was already scanned on ") + json.scan_date + "\n\n" + lang.GetString("Do you want to view results of scan or rescan file? (\"Yes\" to view, \"No\" to rescan)"), lang.GetString("File is already in database"), MessageBoxButtons.YesNo,MessageBoxIcon.Information); // Show dialog with information about previous scan
-                    if (dialogResult == DialogResult.Yes) // Check dialog result
+                if (previouslyUploaded)
+                {
+                    DialogResult dialogResult = MessageBox.Show(lang.GetString("This file was already scanned on ") + json.scan_date + "\n\n" + lang.GetString("Do you want to reupload the file?"), lang.GetString("File is already in database"), MessageBoxButtons.YesNo, MessageBoxIcon.Information); // Show dialog with information about previous scan
+                    if (dialogResult == DialogResult.No) // Check dialog result
                     {
                         Process.Start(json.permalink.ToString()); // Open browser with file link
                         ResetLabel(); // Set label text back
                     }
-                    else if (dialogResult == DialogResult.No)
+                    else if (dialogResult == DialogResult.Yes)
                     {
-                        UploadFile(file, apikey); // Upload file for re-scan
+                        reuploadFile = true;
                     }
                 }
-                catch (Exception error)
+
+                if(!previouslyUploaded || reuploadFile)
                 {
                     try
                     {
-                        // File was probably not found in database or error so we will try to upload it
                         UploadFile(file, apikey);
                     }
                     catch (Exception err)
@@ -149,7 +147,7 @@ namespace VirusTotal_Uploader
             request.AddParameter("apikey", apikey); // Add apikey parameter with API key
             request.AddFile("file", file); // Add file in file parameter
 
-            if (new FileInfo(file).Length > 32000000)
+            if (new FileInfo(file).Length > 32*1000*1000)
             {
                 DialogResult dialogResult = MessageBox.Show("Your file has more than 32MB. Public VirusTotal API does not support file larger than 32MB. Do you want to continue? (Click ok to continue, cancel to stop upload)", "File is too large", MessageBoxButtons.OKCancel, MessageBoxIcon.Information); // Show information dialog
                 if (dialogResult == DialogResult.Cancel) // Check dialog result
@@ -160,8 +158,10 @@ namespace VirusTotal_Uploader
             }
             try
             {
-                FileStream fs = File.Open(file, FileMode.Open);
-            } catch (Exception err)
+                FileStream fs = File.Open(file, FileMode.Open, FileAccess.Read);
+                fs.Close();
+            }
+            catch (Exception err)
             {
                 errw.FormTitle = "Could not read the file";
                 errw.Error = "Can´t read from file! Please check if it is not open by another process or check if you have permissions to read it.\n\nOE: " + err.ToString(); // Create error window
