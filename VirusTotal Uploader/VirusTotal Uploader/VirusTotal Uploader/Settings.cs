@@ -129,6 +129,7 @@ along with this program. If not, see < https://www.gnu.org/licenses/>.","About V
             groupBox2.Text = lang.GetString("Other");
             button3.Text = lang.GetString("About");
             checkBox1.Text = lang.GetString("Use dark theme");
+            checkBox2.Text = lang.GetString("Close when using from context menu");
             label5.Text = lang.GetString("Language");
             button1.Text = lang.GetString("Save settings");
             button2.Text = lang.GetString("Open settings file");
@@ -140,10 +141,11 @@ along with this program. If not, see < https://www.gnu.org/licenses/>.","About V
                 IniData data = parser.ReadFile(AppDomain.CurrentDomain.BaseDirectory + "Settings.ini");
                 textBox1.Text = data["General"]["ApiKey"];
                 string theme = data["General"]["Theme"];
-                if (theme == "dark")
-                {
-                    checkBox1.Checked = true;
-                }
+                bool autoclose = bool.Parse(data["General"]["AutoClose"]);
+
+                checkBox1.Checked = theme.Equals("dark");
+                checkBox2.Checked = autoclose;
+
             }
         }
 
@@ -160,7 +162,7 @@ along with this program. If not, see < https://www.gnu.org/licenses/>.","About V
                     regmenu.SetValue("", lang.GetString("Scan with VirusTotal"));
                 regcmd = Registry.ClassesRoot.CreateSubKey(Command);
                 if (regcmd != null)
-                    regcmd.SetValue("", "\"" + System.Reflection.Assembly.GetEntryAssembly().Location + "\" \"%1\"");
+                    regcmd.SetValue("", "\"" + System.Reflection.Assembly.GetEntryAssembly().Location + "\" \"%1\" \"shell\"");
                 MessageBox.Show(lang.GetString("Added to content menu"), lang.GetString("Yeah!"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
@@ -212,17 +214,16 @@ along with this program. If not, see < https://www.gnu.org/licenses/>.","About V
 
         public void SaveSettings()
         {
-            string darkmode = "light";
-            if (checkBox1.Checked)
-            {
-                darkmode = "dark";
-            }
-
             var parser = new FileIniDataParser();
             IniData data = new IniData();
+
+            string darkmode = checkBox1.Checked ? "dark" : "light";
+
             data["General"]["ApiKey"] = textBox1.Text;
-            data["General"]["Theme"] = darkmode;
             data["General"]["Language"] = comboBox1.Text;
+            data["General"]["Theme"] = darkmode;
+            data["General"]["AutoClose"] = checkBox2.Checked.ToString();
+
             parser.WriteFile(AppDomain.CurrentDomain.BaseDirectory + "Settings.ini", data);
         }
     }

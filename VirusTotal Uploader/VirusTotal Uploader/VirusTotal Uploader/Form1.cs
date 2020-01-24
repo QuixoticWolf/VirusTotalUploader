@@ -44,6 +44,7 @@ namespace VirusTotal_Uploader
     {
         public string api; // API key used by VirusTotal
         public string theme; // Application theme
+        public bool autoclose; //Close the app automatically when run from the shell
 
         public Languages lang; // Language class
         public ErrorWindow errw; // Error window used for reporting errors
@@ -82,7 +83,7 @@ namespace VirusTotal_Uploader
         private void Form1_DragDrop(object sender, DragEventArgs e)
         {
             string[] files = (string[])e.Data.GetData(DataFormats.FileDrop); // Get all files dropped into form
-            foreach (string file in files) CheckFile(file, api); // Check all files each
+            foreach (string file in files) CheckFile(file, api, false); // Check all files each
         }
 
         /// <summary>
@@ -90,7 +91,7 @@ namespace VirusTotal_Uploader
         /// </summary>
         /// <param name="file">String containing file location</param>
         /// <param name="apikey">API key to use for request</param>
-        public async void CheckFile(string file, string apikey)
+        public void CheckFile(string file, string apikey, bool closeWhenDone)
         {
             this.Invoke(new Action(() => label1.Text = lang.GetString("Checking..."))); // Set label text in main thread
 
@@ -101,44 +102,58 @@ namespace VirusTotal_Uploader
 
             // Execute request
             var asyncHandle = client.ExecuteAsync(request, response => {
-                var content = response.Content; // Get content of response
-                dynamic json = JsonConvert.DeserializeObject(content); // Deserialize JSON response
 
-                bool previouslyUploaded = json.permalink != null;
-                bool reuploadFile = false;
-
-                if (previouslyUploaded)
+                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
                 {
-                    DialogResult dialogResult = MessageBox.Show(lang.GetString("This file was already scanned on ") + json.scan_date + "\n\n" + lang.GetString("Do you want to reupload the file?"), lang.GetString("File is already in database"), MessageBoxButtons.YesNo, MessageBoxIcon.Information); // Show dialog with information about previous scan
-                    if (dialogResult == DialogResult.No) // Check dialog result
+                    MessageBox.Show("Request rate limit exceeded. You are making more requests than allowed. You have exceeded one of your quotas (minute, daily or monthly). Daily quotas are reset every day at 00:00 UTC.", lang.GetString("Error"), MessageBoxButtons.OK, MessageBoxIcon.Error); // Display error dialog
+                    ResetLabel();
+                }
+                else
+                {
+                    var content = response.Content; // Get content of response
+                    dynamic json = JsonConvert.DeserializeObject(content); // Deserialize JSON response
+
+                    bool previouslyUploaded = json.permalink != null;
+                    bool reuploadFile = false;
+
+                    if (previouslyUploaded)
                     {
-                        Process.Start(json.permalink.ToString()); // Open browser with file link
-                        ResetLabel(); // Set label text back
+                        DialogResult dialogResult = MessageBox.Show(lang.GetString("This file was already scanned on ") + json.scan_date + "\n\n" + lang.GetString("Do you want to reupload the file?"), lang.GetString("File is already in database"), MessageBoxButtons.YesNo, MessageBoxIcon.Information); // Show dialog with information about previous scan
+                        if (dialogResult == DialogResult.No) // Check dialog result
+                        {
+                            Process.Start(json.permalink.ToString()); // Open browser with file link
+                            ResetLabel(); // Set label text back
+                        }
+                        else if (dialogResult == DialogResult.Yes)
+                        {
+                            reuploadFile = true;
+                        }
                     }
-                    else if (dialogResult == DialogResult.Yes)
+
+                    if (!previouslyUploaded || reuploadFile)
                     {
-                        reuploadFile = true;
+                        try
+                        {
+                            UploadFile(file, apikey);
+                        }
+                        catch (Exception err)
+                        {
+                            //MessageBox.Show("Error sending request!\nOE: " + err.ToString() + "\n\n" + error.ToString(), lang.GetString("Fatal Error"), MessageBoxButtons.OK, MessageBoxIcon.Error); // Show error messagebox
+                            errw.Error = "Error sending request!\n\nOE: " + err.ToString();
+                            this.Invoke(new Action(() => errw.Show()));
+                            ResetLabel(); // Set label text back
+                        }
                     }
                 }
 
-                if(!previouslyUploaded || reuploadFile)
+                if (closeWhenDone)
                 {
-                    try
-                    {
-                        UploadFile(file, apikey);
-                    }
-                    catch (Exception err)
-                    {
-                        //MessageBox.Show("Error sending request!\nOE: " + err.ToString() + "\n\n" + error.ToString(), lang.GetString("Fatal Error"), MessageBoxButtons.OK, MessageBoxIcon.Error); // Show error messagebox
-                        errw.Error = "Error sending request!\n\nOE: " + err.ToString();
-                        this.Invoke(new Action(() => errw.Show()));
-                        ResetLabel(); // Set label text back
-                    }
+                    this.Invoke(new Action(() => this.Close()));
                 }
             });
         }
 
-        public async void UploadFile(string file, string apikey)
+        public void UploadFile(string file, string apikey)
         {
             this.Invoke(new Action(() => label1.Text = lang.GetString("Uploading..."))); // Set label text in main thread
 
@@ -173,11 +188,19 @@ namespace VirusTotal_Uploader
             //IRestResponse response = client.Execute(request);
 
             // Execute request
-            var asyncHandle = client.ExecuteAsync(request, response => {
-                var content = response.Content; // Get content from response
+            var response = client.Execute(request);
+            var content = response.Content; // Get content from response
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                MessageBox.Show("Request rate limit exceeded. You are making more requests than allowed. You have exceeded one of your quotas (minute, daily or monthly). Daily quotas are reset every day at 00:00 UTC.", lang.GetString("Error"), MessageBoxButtons.OK, MessageBoxIcon.Error); // Display error dialog
+                ResetLabel();
+            }
+            else
+            {
                 if (content.Contains("<html>")) // Check if response is in HTML (there was some issues with large files)
                 {
-                    MessageBox.Show("Response from VirusTotal is in HTML. This is probably because your file is too large.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); // Display error dialog
+                    MessageBox.Show("Response from VirusTotal is in HTML. This is probably because your file is too large.", lang.GetString("Error"), MessageBoxButtons.OK, MessageBoxIcon.Error); // Display error dialog
                     ResetLabel();
                     return;
                 }
@@ -204,8 +227,9 @@ namespace VirusTotal_Uploader
                         this.Invoke(new Action(() => errw.Show())); // Open error window
                     }
                 }
-                ResetLabel(); // Reset label text
-            });
+            }
+
+            ResetLabel(); // Reset label text
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -221,12 +245,14 @@ namespace VirusTotal_Uploader
             if (!File.Exists(AppDomain.CurrentDomain.BaseDirectory + "Settings.ini")) // Check if settings file exists
             {
                 MessageBox.Show(lang.GetString("No settings file found!\n\nThis is because you probably opened this app for first time. Please go to settings and add API key."), lang.GetString("Error"), MessageBoxButtons.OK, MessageBoxIcon.Error); // Show error dialog
-            } else
+            }
+            else
             {
                 var parser = new FileIniDataParser(); // Initialize ini file parser
                 IniData data = parser.ReadFile(AppDomain.CurrentDomain.BaseDirectory + "Settings.ini"); // Load settings file
                 api = data["General"]["ApiKey"];  // Get apikey
                 theme = data["General"]["Theme"]; // Get theme
+                autoclose = bool.Parse(data["General"]["AutoClose"]); //Get autoclose
             }
 
             if (theme == "dark") // Check theme
@@ -242,7 +268,14 @@ namespace VirusTotal_Uploader
 
             string[] args = Environment.GetCommandLineArgs(); // Get program arguments
             if (args.Length > 1) {
-                CheckFile(args[1], api); // Upload file
+                bool closeWhenDone = false;
+
+                if (autoclose && args.Length > 2)
+                {
+                    closeWhenDone = args[2].Equals("shell");
+                }
+
+                CheckFile(args[1], api, closeWhenDone); // Upload file
             }
         }
 
