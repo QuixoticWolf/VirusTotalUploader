@@ -34,7 +34,7 @@ Alternatively you can add VirusTotal Uploader to file content menu and click on 
 4. The compiled .exe is in `VirusTotalUploader/VirusTotal Uploader/VirusTotal Uploader/bin/Debug` along with its dependencies.
     * The first time building the project after a change it may give a few warnings. Rebuilding without making more changes usually results in 0 warnings.
 
-You may now move and run `VirusTotal Uploader.exe` from anywhere you'd like, just as long as the accompaning files are in the same directory as the exe. You may also delete the `app.publish` directory along with its contents.
+You may now move and run `VirusTotal Uploader.exe` from anywhere you'd like, just as long as the accompaning files are in the same directory as the exe.
 
 ## Contributing
 If you have any idea how to make this app better, please create pull request. If you find any bug, please create issue.
