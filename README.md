@@ -1,4 +1,7 @@
 ﻿# VirusTotal Uploader
+ 
+[![Build status](https://ci.appveyor.com/api/projects/status/mhi512tdi2jbbh5u?svg=true)](https://ci.appveyor.com/project/QuixoticWolf/virustotaluploader)
+ 
 ![screenshot](https://i.imgur.com/AoYrHye.png)
 
 VirusTotal Uploader is open-source application written in C# and WinForms for uploading files to VirusTotal service. It has a great and simple design with drag and drop interface. It is easy to use and you can avoid many viruses with it!
