@@ -112,6 +112,7 @@
             this.Name = "ErrorWindow";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "VirusTotal Uploader - Error";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.ErrorWindow_FormClosing);
             this.Load += new System.EventHandler(this.ErrorWindow_Load);
             this.groupBox1.ResumeLayout(false);
             this.groupBox2.ResumeLayout(false);

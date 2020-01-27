@@ -18,7 +18,6 @@ namespace VirusTotal_Uploader
         public string FormTitle = "Fatal Error";
         public string Error = "No error has been reported. Please try debugging program!";
 
-
         private ArrayList GetInformation(string qry)
         {
             ManagementObjectSearcher searcher;
@@ -71,12 +70,18 @@ namespace VirusTotal_Uploader
 
         private void button1_Click(object sender, EventArgs e)
         {
-            Process.Start("https://github.com/SamuelTulach/VirusTotalUploader/issues/new");
+            Process.Start("https://github.com/QuixoticWolf/VirusTotalUploader/issues/new");
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
             Environment.Exit(-1);
+        }
+
+        private void ErrorWindow_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            this.Hide();
+            e.Cancel = true;
         }
     }
 }

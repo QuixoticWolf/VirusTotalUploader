@@ -54,14 +54,9 @@ namespace VirusTotal_Uploader
             InitializeComponent();
         }
 
-        private void panel1_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/SamuelTulach/VirusTotalUploader"); // Open GitHub Page
+            Process.Start("https://github.com/QuixoticWolf/VirusTotalUploader"); // Open GitHub Page
         }
 
         private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -83,7 +78,18 @@ namespace VirusTotal_Uploader
         private void Form1_DragDrop(object sender, DragEventArgs e)
         {
             string[] files = (string[])e.Data.GetData(DataFormats.FileDrop); // Get all files dropped into form
-            foreach (string file in files) CheckFile(file, api, false); // Check all files each
+
+            try
+            {
+                foreach (string file in files) CheckFile(file, api, false); // Check all files each
+            }
+            catch (Exception err)
+            {
+                //MessageBox.Show("Error sending request!\nOE: " + err.ToString() + "\n\n" + error.ToString(), lang.GetString("Fatal Error"), MessageBoxButtons.OK, MessageBoxIcon.Error); // Show error messagebox
+                errw.Error = "Error sending request!\n\nOE: " + err.ToString();
+                this.Invoke(new Action(() => errw.Show()));
+                ResetLabel(); // Set label text back
+            }
         }
 
         /// <summary>
@@ -98,7 +104,7 @@ namespace VirusTotal_Uploader
             var client = new RestClient("https://www.virustotal.com"); // Initialize RestClient
             var request = new RestRequest("vtapi/v2/file/report", Method.POST); // Initialize RestRequest
             request.AddParameter("apikey", apikey); // Add apikey parameter with API key
-            request.AddParameter("resource", GetMD5(file)); // Add resource paramater with file MD5 checksum
+            request.AddParameter("resource", GetHash(file)); // Add resource paramater with file MD5 checksum
 
             // Execute request
             var asyncHandle = client.ExecuteAsync(request, response => {
@@ -267,6 +273,7 @@ namespace VirusTotal_Uploader
             }
 
             string[] args = Environment.GetCommandLineArgs(); // Get program arguments
+
             if (args.Length > 1) {
                 bool closeWhenDone = false;
 
@@ -275,7 +282,17 @@ namespace VirusTotal_Uploader
                     closeWhenDone = args[2].Equals("shell");
                 }
 
-                CheckFile(args[1], api, closeWhenDone); // Upload file
+                try
+                {
+                    CheckFile(args[1], api, closeWhenDone); // Upload file
+                }
+                catch (Exception err)
+                {
+                    //MessageBox.Show("Error sending request!\nOE: " + err.ToString() + "\n\n" + error.ToString(), lang.GetString("Fatal Error"), MessageBoxButtons.OK, MessageBoxIcon.Error); // Show error messagebox
+                    errw.Error = "Error sending request!\n\nOE: " + err.ToString();
+                    this.Invoke(new Action(() => errw.Show()));
+                    ResetLabel(); // Set label text back
+                }
             }
         }
 
@@ -284,13 +301,13 @@ namespace VirusTotal_Uploader
         /// </summary>
         /// <param name="filename">File location</param>
         /// <returns></returns>
-        public String GetMD5(string filename)
+        public String GetHash(string filename)
         {
-            using (var md5 = MD5.Create())
+            using (var sha2 = SHA256.Create())
             {
                 using (var stream = File.OpenRead(filename))
                 {
-                    byte[] hashBytes = md5.ComputeHash(stream); // Get bytes
+                    byte[] hashBytes = sha2.ComputeHash(stream); // Get bytes
                     StringBuilder sb = new StringBuilder(); // Initialize StringBuilder
                     for (int i = 0; i < hashBytes.Length; i++)
                     {

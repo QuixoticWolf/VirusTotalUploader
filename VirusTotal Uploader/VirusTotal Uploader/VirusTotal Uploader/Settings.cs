@@ -41,27 +41,25 @@ namespace VirusTotal_Uploader
             InitializeComponent();
         }
 
-        private string GetMD5()
+        private string GetAppHash()
         {
-            System.Security.Cryptography.MD5CryptoServiceProvider md5 = new System.Security.Cryptography.MD5CryptoServiceProvider();
+            System.Security.Cryptography.SHA256CryptoServiceProvider sha2 = new System.Security.Cryptography.SHA256CryptoServiceProvider();
             FileStream stream = new FileStream(Process.GetCurrentProcess().MainModule.FileName, FileMode.Open, FileAccess.Read);
 
-            md5.ComputeHash(stream);
+            sha2.ComputeHash(stream);
 
             stream.Close();
 
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < md5.Hash.Length; i++)
-                sb.Append(md5.Hash[i].ToString("x2"));
+            for (int i = 0; i < sha2.Hash.Length; i++)
+                sb.Append(sha2.Hash[i].ToString("x2"));
 
             return sb.ToString().ToUpperInvariant();
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("VirusTotal Uploader\n\n" + GetMD5() + "\n\n" + @"
-Copyright (c) 2018 Samuel Tulach
-
+            MessageBox.Show("VirusTotal Uploader\n\n" + GetAppHash() + "\n\n" + @"
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -73,7 +71,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program. If not, see < https://www.gnu.org/licenses/>.","About VirusTotal Uploader", MessageBoxButtons.OK,MessageBoxIcon.Information);
+along with this program. If not, see https://www.gnu.org/licenses/.","About VirusTotal Uploader", MessageBoxButtons.OK,MessageBoxIcon.Information);
         }
 
        private void button1_Click(object sender, EventArgs e)
@@ -123,13 +121,13 @@ along with this program. If not, see < https://www.gnu.org/licenses/>.","About V
 
             label2.Text = lang.GetString("API key");
             label3.Text = lang.GetString("To get API key log-in on VirusTotal and under account select \"My API key\"");
-            button4.Text = lang.GetString("Add to content menu");
-            button5.Text = lang.GetString("Remove from content menu");
+            button4.Text = lang.GetString("Add to context menu");
+            button5.Text = lang.GetString("Remove from context menu");
             groupBox1.Text = lang.GetString("General");
             groupBox2.Text = lang.GetString("Other");
             button3.Text = lang.GetString("About");
             checkBox1.Text = lang.GetString("Use dark theme");
-            checkBox2.Text = lang.GetString("Close when using from context menu");
+            checkBox2.Text = lang.GetString("Close after scanning from shell");
             label5.Text = lang.GetString("Language");
             button1.Text = lang.GetString("Save settings");
             button2.Text = lang.GetString("Open settings file");
